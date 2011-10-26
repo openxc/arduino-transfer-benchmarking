@@ -1,0 +1,19 @@
+Benchmarking USB and FTDI on Arduino-compatible boards
+=========================================================
+
+## Requirements
+
+* chipKIT Max32 with network shield (or compatible PIC32 board)
+* Microchip USB library installed in the sketchbook folder (or otherwise
+  available)
+
+## USB
+
+* Upload the `benchmarkUSB.pde` sketch to the board.
+* Plug in the micro-USB connector to the host PC
+* Run `python recieve.py` to run the benchmark.
+
+## FTDI
+
+* Upload the `benchmarkFTDI.pde` sketch to the board.
+* Run `python recieve.py --ftdi` to run the benchmark.
