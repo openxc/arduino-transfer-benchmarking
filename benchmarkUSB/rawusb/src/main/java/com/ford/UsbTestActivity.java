@@ -53,12 +53,6 @@ public class UsbTestActivity extends ListActivity {
 		Log.i(TAG, "onCreate");
 
         mUsbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
-
-        IntentFilter filter = new IntentFilter();
-        filter.addAction("android.hardware.usb.action.USB_DEVICE_ATTACHED");
-        filter.addAction("android.hardware.usb.action.USB_DEVICE_DETACHED");
-        registerReceiver(mBroadcastReceiver, filter);
-
         refreshDeviceList();
 
         ListView view = getListView();
@@ -72,6 +66,23 @@ public class UsbTestActivity extends ListActivity {
                 startActivity(intent);
             }
         });
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction("android.hardware.usb.action.USB_DEVICE_ATTACHED");
+        filter.addAction("android.hardware.usb.action.USB_DEVICE_DETACHED");
+        // TODO unregister on close
+        registerReceiver(mBroadcastReceiver, filter);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        unregisterReceiver(mBroadcastReceiver);
     }
 
     public void refreshDeviceList() {
