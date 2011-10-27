@@ -6,7 +6,6 @@ import json
 import sys
 import argparse
 import usb.core
-import serial
 import string
 
 
@@ -71,6 +70,7 @@ class FtdiDevice(MessageDeviceBenchmarker):
     MESSAGE_SIZE_STEP = 20
 
     def __init__(self, device="/dev/ttyUSB0", baud=1152000):
+        import serial
         self.device = serial.Serial(device, baud, timeout=10)
         self.device.flushInput()
         self.message_size = -1
