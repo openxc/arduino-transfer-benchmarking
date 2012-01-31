@@ -1,5 +1,7 @@
 package com.ford;
 
+import java.nio.ByteBuffer;
+
 import java.util.concurrent.TimeUnit;
 
 import java.util.Map;
@@ -18,6 +20,7 @@ import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbEndpoint;
 import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
+import android.hardware.usb.UsbRequest;
 
 import android.os.Bundle;
 import android.os.Handler;
@@ -109,23 +112,31 @@ public class SteeringWheelDisplay extends Activity {
     }
 
     private void transferData() {
-        byte[] bytes = new byte[128];
         int transferred = 0;
         final long startTime = System.nanoTime();
         final long endTime;
         while(transferred < 1000 * 1000) {
-            int received = mConnection.bulkTransfer(mEndpoint, bytes,
-                bytes.length, 0);
-            transferred += received;
-            byte[] receivedBytes = new byte[received];
-            System.arraycopy(bytes, 0, receivedBytes, 0, received);
-            mBuffer.append(new String(receivedBytes));
+            ByteBuffer buffer = ByteBuffer.allocate(1024);
+            UsbRequest request = new UsbRequest();
+            request.initialize(mConnection, mEndpoint);
+            request.queue(buffer, 1024);
+            request = mConnection.requestWait();
 
-            new Thread(new Runnable() {
-                public void run() {
-                    parseStringBuffer();
-                }
-            }).start();
+            byte[] receivedBytes = buffer.array();
+            String received = new String(receivedBytes);
+            int newlineIndex = received.indexOf("\r\n");
+            if(newlineIndex != -1) {
+                final String messageString = received.substring(0, newlineIndex);
+                transferred += messageString.length();
+                mBuffer.append(messageString);
+
+                new Thread(new Runnable() {
+                    public void run() {
+                        parseStringBuffer();
+                    }
+                }).start();
+            }
+            request.close();
 
             final int currentTransferred = transferred;
             mHandler.post(new Runnable() {
