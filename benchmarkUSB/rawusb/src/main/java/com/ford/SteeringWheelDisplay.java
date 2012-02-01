@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 
 import java.util.Map;
+import java.util.LinkedList;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -47,6 +48,9 @@ public class SteeringWheelDisplay extends Activity {
     private TextView mElapsedTimeView;
     private TextView mTransferRateView;
     private TextView mSteeringWheelAngleView;
+    // pool of requests for the IN endpoint
+    private final LinkedList<UsbRequest> mInRequestPool =
+        new LinkedList<UsbRequest>();
 
     private UsbDeviceConnection mConnection;
     private UsbEndpoint mEndpoint;
@@ -111,52 +115,61 @@ public class SteeringWheelDisplay extends Activity {
         }
     }
 
+    public UsbRequest getInRequest() {
+        synchronized(mInRequestPool) {
+            if (mInRequestPool.isEmpty()) {
+                UsbRequest request = makeRequest();
+                return request;
+            } else {
+                return mInRequestPool.removeFirst();
+            }
+        }
+    }
+
+    private UsbRequest makeRequest() {
+        Log.i(TAG, "Created new USB request");
+        UsbRequest request = new UsbRequest();
+        request.initialize(mConnection, mEndpoint);
+        ByteBuffer buffer = ByteBuffer.allocate(64);
+        request.setClientData(buffer);
+        return request;
+    }
+
     private void transferData() {
         int transferred = 0;
         final long startTime = System.nanoTime();
         final long endTime;
-        while(transferred < 1000 * 1000) {
-            ByteBuffer buffer = ByteBuffer.allocate(1024);
-            UsbRequest request = new UsbRequest();
-            request.initialize(mConnection, mEndpoint);
-            request.queue(buffer, 1024);
+
+        UsbRequest request = getInRequest();
+        request.queue((ByteBuffer) request.getClientData(), 64);
+
+        while(transferred < 1000 * 500) {
             request = mConnection.requestWait();
+            ByteBuffer buffer = (ByteBuffer) request.getClientData();
 
             byte[] receivedBytes = buffer.array();
             String received = new String(receivedBytes);
             int newlineIndex = received.indexOf("\r\n");
             if(newlineIndex != -1) {
-                final String messageString = received.substring(0, newlineIndex);
+                final String messageString =
+                    received.substring(0, newlineIndex) + "\r\n";
                 transferred += messageString.length();
-                mBuffer.append(messageString);
-
-                new Thread(new Runnable() {
-                    public void run() {
-                        parseStringBuffer();
-                    }
-                }).start();
             }
-            request.close();
+            UsbRequest nextRequest = getInRequest();
+            nextRequest.queue((ByteBuffer) nextRequest.getClientData(), 64);
 
-            final int currentTransferred = transferred;
-            mHandler.post(new Runnable() {
-                public void run() {
-                    double kilobytesTransferred = currentTransferred / 1000.0;
-                    mTransferredBytesView.setText(
-                        Double.toString(kilobytesTransferred));
-                    long elapsedTime = TimeUnit.SECONDS.convert(
-                        System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
-                    mElapsedTimeView.setText(elapsedTime + " seconds");
-                    mTransferRateView.setText(
-                        kilobytesTransferred / elapsedTime + " KB/s");
-                }
-            });
+            synchronized (mInRequestPool) {
+                mInRequestPool.add(request);
+            }
         }
         endTime = System.nanoTime();
-        Log.i(TAG, "Transferred " + transferred + " bytes in "
-            + TimeUnit.SECONDS.convert(endTime - startTime,
-                TimeUnit.NANOSECONDS)
-            + " seconds");
+
+        double kilobytesTransferred = transferred / 1000.0;
+        long elapsedTime = TimeUnit.SECONDS.convert(
+            System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
+        Log.i(TAG, "Transferred " + kilobytesTransferred + " KB in "
+            + elapsedTime + " seconds at " +
+            kilobytesTransferred / elapsedTime + " KB/s");
     }
 
     private final Runnable mSetupDeviceTask = new Runnable() {
@@ -180,6 +193,12 @@ public class SteeringWheelDisplay extends Activity {
 
             new Thread(new Runnable() {
                 public void run() {
+                    for(int i = 0; i < 10; i++) {
+                        UsbRequest request = makeRequest();
+                        synchronized (mInRequestPool) {
+                            mInRequestPool.add(request);
+                        }
+                    }
                     transferData();
                 }
             }).start();
