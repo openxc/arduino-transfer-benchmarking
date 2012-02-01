@@ -130,7 +130,7 @@ public class SteeringWheelDisplay extends Activity {
         Log.i(TAG, "Created new USB request");
         UsbRequest request = new UsbRequest();
         request.initialize(mConnection, mEndpoint);
-        ByteBuffer buffer = ByteBuffer.allocate(64);
+        ByteBuffer buffer = ByteBuffer.allocate(1024);
         request.setClientData(buffer);
         return request;
     }
@@ -141,7 +141,7 @@ public class SteeringWheelDisplay extends Activity {
         final long endTime;
 
         UsbRequest request = getInRequest();
-        request.queue((ByteBuffer) request.getClientData(), 64);
+        request.queue((ByteBuffer) request.getClientData(), 1024);
 
         while(transferred < 1000 * 500) {
             request = mConnection.requestWait();
@@ -156,7 +156,7 @@ public class SteeringWheelDisplay extends Activity {
                 transferred += messageString.length();
             }
             UsbRequest nextRequest = getInRequest();
-            nextRequest.queue((ByteBuffer) nextRequest.getClientData(), 64);
+            nextRequest.queue((ByteBuffer) nextRequest.getClientData(), 1024);
 
             synchronized (mInRequestPool) {
                 mInRequestPool.add(request);
