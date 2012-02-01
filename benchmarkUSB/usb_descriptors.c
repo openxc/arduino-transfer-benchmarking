@@ -208,14 +208,14 @@ ROM BYTE configDescriptor1[]={
     USB_DESCRIPTOR_ENDPOINT,    //Endpoint Descriptor
     _EP01_OUT,                  //EndpointAddress
     _BULK,                       //Attributes
-    USBGEN_EP_SIZE,0x00,        //size
+    USBGEN_EP_SIZE,16,        //size
     1,                         //Interval
 
     0x07,                       /*sizeof(USB_EP_DSC)*/
     USB_DESCRIPTOR_ENDPOINT,    //Endpoint Descriptor
     _EP01_IN,                   //EndpointAddress
     _BULK,                       //Attributes
-    USBGEN_EP_SIZE,0x00,        //size
+    USBGEN_EP_SIZE,16,        //size
     1                          //Interval
 };
 
