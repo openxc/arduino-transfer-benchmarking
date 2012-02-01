@@ -109,7 +109,7 @@ public class SteeringWheelDisplay extends Activity {
     }
 
     private void transferData() {
-        byte[] bytes = new byte[128];
+        byte[] bytes = new byte[1024];
         int transferred = 0;
         final long startTime = System.nanoTime();
         final long endTime;
@@ -121,6 +121,7 @@ public class SteeringWheelDisplay extends Activity {
             System.arraycopy(bytes, 0, receivedBytes, 0, received);
             mBuffer.append(new String(receivedBytes));
 
+            // this slows the transfer rate down quite a bit
             new Thread(new Runnable() {
                 public void run() {
                     parseStringBuffer();
@@ -142,10 +143,12 @@ public class SteeringWheelDisplay extends Activity {
             });
         }
         endTime = System.nanoTime();
-        Log.i(TAG, "Transferred " + transferred + " bytes in "
-            + TimeUnit.SECONDS.convert(endTime - startTime,
-                TimeUnit.NANOSECONDS)
-            + " seconds");
+        double kilobytesTransferred = transferred / 1000.0;
+        long elapsedTime = TimeUnit.SECONDS.convert(
+            System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
+        Log.i(TAG, "Transferred " + kilobytesTransferred + " KB in "
+            + elapsedTime + " seconds at " +
+            kilobytesTransferred / elapsedTime + " KB/s");
     }
 
     private final Runnable mSetupDeviceTask = new Runnable() {
