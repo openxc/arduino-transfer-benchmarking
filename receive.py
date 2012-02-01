@@ -94,8 +94,8 @@ class FtdiDevice(MessageDeviceBenchmarker):
 class UsbDevice(MessageDeviceBenchmarker):
     DATA_ENDPOINT = 0x81
     MAX_BYTES = 10 * 1000 * 100
-    STARTING_MESSAGE_SIZE = 64
-    ENDING_MESSAGE_SIZE = 1024
+    STARTING_MESSAGE_SIZE = 512
+    ENDING_MESSAGE_SIZE = 4096 * 4
     MESSAGE_SIZE_STEP = 128
     MESSAGE_SIZE_CONTROL_MESSAGE = 0x80
 
@@ -118,9 +118,12 @@ class UsbDevice(MessageDeviceBenchmarker):
 
     def _validate(self, data):
         data = data.tostring()
-        data = json.loads(data)
-        assert "name" in data
-        assert "value" in data
+        for line in data.split("\r\n"):
+            if not line:
+                continue
+            measurement = json.loads(line)
+            assert "name" in measurement
+            assert "value" in measurement
 
 
 def parse_options():
